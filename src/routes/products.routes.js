@@ -4,11 +4,27 @@ import fs from "fs";
 const products = [];
 const Routes = express.Router();
 
-Routes.get('/', (req, res) => {
-    res.send("HOLAAA");
+
+class product {
+    constructor(id, title, description, code, price, stock, category, thumbnails){
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.code = code;
+        this.price = price;
+        this.status = true;
+        this.stock = stock;
+        this.category = category;
+        this.thumbnails = thumbnails
+    }
+}
+
+
+Routes.get('/products', (req, res) => {
+    res.send("PRODUCTS");
 });
 
-Routes.get('/GET', (req, res) => {
+Routes.get('/products/GET', (req, res) => {
     fs.readFile('./src/models/products.json', 'utf-8', (err, data) => {
         if (err) {
             res.status(404).send("Error al leer el archivo");
@@ -19,7 +35,7 @@ Routes.get('/GET', (req, res) => {
     });
 });
 
-Routes.get('/GET/:Pid', (req, res) =>{
+Routes.get('/products/GET/:Pid', (req, res) =>{
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
         const { Pid } = req.params;
@@ -30,7 +46,7 @@ Routes.get('/GET/:Pid', (req, res) =>{
     })
 })
 
-Routes.get('/GET/LIM/:lim', (req, res) =>{
+Routes.get('/products/GET/LIM/:lim', (req, res) =>{
     const { lim } = req.params;
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
@@ -41,7 +57,7 @@ Routes.get('/GET/LIM/:lim', (req, res) =>{
     })
 })
 
-Routes.delete('/DELETE/:Pid', (req, res) =>{
+Routes.delete('/products/DELETE/:Pid', (req, res) =>{
     const { Pid } = req.params;
     const posicion = products.findIndex(product => product.id === Pid);
     console.log("POSICION", posicion)
@@ -60,7 +76,7 @@ Routes.delete('/DELETE/:Pid', (req, res) =>{
     }
 })
 
-Routes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
+Routes.put('/products/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
     const { Pid } = req.params;
     const { title } = req.params;
     const { description } = req.params;
@@ -109,7 +125,7 @@ Routes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbna
 });
 
 
-Routes.post('/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) =>{
+Routes.post('/products/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) =>{
     const { id } = req.params;
     const { title } = req.params;
     const { description } = req.params;
@@ -119,20 +135,9 @@ Routes.post('/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbn
     const { category } = req.params;
     const { thumbnails } = req.params;
     
-    const product = {
-        id: id,
-        title: title,
-        description: description,
-        code: code,
-        price: price,
-        status: true,
-        stock: stock,
-        category: category,
-        thumbnails: thumbnails
-    }
-    
-    res.send(`Producto Creado ${product}`)
-    products.push(product)
+    const producto = new product(id,title,description,code,price,stock,category,thumbnails)
+    res.send(`Producto Creado ${producto}`)
+    products.push(producto)
     
     fs.writeFile("./src/models/products.json", JSON.stringify(products), (err) => {
         if (err) {
