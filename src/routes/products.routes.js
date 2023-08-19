@@ -2,7 +2,8 @@ import express from 'express'
 import fs from "fs";
 
 const products = [];
-const Routes = express.Router();
+const productRoutes = express.Router();
+const cartRoutes = express.Router();
 
 
 class product {
@@ -20,11 +21,7 @@ class product {
 }
 
 
-Routes.get('/products', (req, res) => {
-    res.send("PRODUCTS");
-});
-
-Routes.get('/products/GET', (req, res) => {
+productRoutes.get('/GET', (req, res) => {
     fs.readFile('./src/models/products.json', 'utf-8', (err, data) => {
         if (err) {
             res.status(404).send("Error al leer el archivo");
@@ -35,7 +32,7 @@ Routes.get('/products/GET', (req, res) => {
     });
 });
 
-Routes.get('/products/GET/:Pid', (req, res) =>{
+productRoutes.get('/GET/:Pid', (req, res) =>{
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
         const { Pid } = req.params;
@@ -46,7 +43,7 @@ Routes.get('/products/GET/:Pid', (req, res) =>{
     })
 })
 
-Routes.get('/products/GET/LIM/:lim', (req, res) =>{
+productRoutes.get('/GET/LIM/:lim', (req, res) =>{
     const { lim } = req.params;
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
@@ -57,7 +54,7 @@ Routes.get('/products/GET/LIM/:lim', (req, res) =>{
     })
 })
 
-Routes.delete('/products/DELETE/:Pid', (req, res) =>{
+productRoutes.delete('/DELETE/:Pid', (req, res) =>{
     const { Pid } = req.params;
     const posicion = products.findIndex(product => product.id === Pid);
     console.log("POSICION", posicion)
@@ -76,7 +73,7 @@ Routes.delete('/products/DELETE/:Pid', (req, res) =>{
     }
 })
 
-Routes.put('/products/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
+productRoutes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
     const { Pid } = req.params;
     const { title } = req.params;
     const { description } = req.params;
@@ -125,7 +122,7 @@ Routes.put('/products/PUT/:Pid/:title/:description/:code/:price/:stock/:category
 });
 
 
-Routes.post('/products/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) =>{
+productRoutes.post('/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) =>{
     const { id } = req.params;
     const { title } = req.params;
     const { description } = req.params;
@@ -147,4 +144,8 @@ Routes.post('/products/POST/:id/:title/:description/:code/:price/:stock/:categor
     
     })
  
-export default Routes;
+
+cartRoutes.get('/GET', (req, res) =>{
+    res.send("Cart")
+})
+export { cartRoutes, productRoutes };
