@@ -4,7 +4,8 @@ import fs from "fs";
 const products = [];
 const productRoutes = express.Router();
 const cartRoutes = express.Router();
-
+let contCart = 0;
+const arrayCarrito = [];
 
 class product {
     constructor(id, title, description, code, price, stock, category, thumbnails){
@@ -143,9 +144,48 @@ productRoutes.post('/POST/:id/:title/:description/:code/:price/:stock/:category/
       })
     
     })
- 
 
-cartRoutes.get('/GET', (req, res) =>{
-    res.send("Cart")
+
+cartRoutes.post('/POST/:Cid/:products', (req, res) =>{
+    const { Cid } = req.params;
+    contCart ++;
+   
+    const carrito = {
+        id: Cid,
+        products: [] 
+    }
+    arrayCarrito.push(carrito)
+    res.send(arrayCarrito)
 })
+
+cartRoutes.get('/GET/:Cid', (req, res) =>{
+    const { Cid } = req.params;
+
+    const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);
+    res.send(selectedCart)
+})
+
+cartRoutes.post('/POST/:Cid/product/:Pid', (req, res) => {
+    const { Cid, Pid } = req.params;
+
+    const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);
+
+    if (!selectedCart) {
+        res.status(404).send("Carrito no encontrado.");
+        return;
+    }
+
+    const cartProduct = selectedCart.products.find((producto) => producto.id === Pid);
+
+    if (!cartProduct) {
+        selectedCart.products.push({
+            id: Pid,
+            quantity: 1
+        });
+    } else {
+        cartProduct.quantity++;
+    }
+    res.send(selectedCart);
+});
+
 export { cartRoutes, productRoutes };
