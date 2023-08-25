@@ -1,7 +1,6 @@
 import express from 'express'
 import fs from "fs";
-
-const products = [];
+let products = [];
 const productRoutes = express.Router();
 const cartRoutes = express.Router();
 let contCart = 0;
@@ -21,21 +20,27 @@ class product {
     }
 }
 
-
-productRoutes.get('/GET', (req, res) => {
-    fs.readFile('./src/models/products.json', 'utf-8', (err, data) => {
-        if (err) {
-            res.status(404).send("Error al leer el archivo");
-            return;
-        }
-        const parsedData = JSON.parse(data);
-        res.send(parsedData);
-    });
-});
-
-productRoutes.get('/GET/:Pid', (req, res) =>{
+productRoutes.get('/products', (req,res)=>{
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
+        const dataStr = JSON.parse(data);
+        res.send(dataStr);
+    })
+})
+
+productRoutes.get('/products/LIM/:lim', (req, res) => {
+    const { lim } = req.params;
+    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
+        if(err) res.status(404).send("Error al leer el archivo");
+        const dataStr = JSON.parse(data)
+        const dataAMostrar = dataStr.splice(0, lim);
+        res.send(dataAMostrar);
+    })
+});
+
+productRoutes.get('/products/:Pid', (req, res) =>{
+    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
+        if(err) { res.status(404).send("Error al leer el archivo");}
         const { Pid } = req.params;
         const dataStr = JSON.parse(data)
         dataStr.map((newData)=>{
@@ -44,37 +49,28 @@ productRoutes.get('/GET/:Pid', (req, res) =>{
     })
 })
 
-productRoutes.get('/GET/LIM/:lim', (req, res) =>{
-    const { lim } = req.params;
-    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
-        if(err) res.status(404).send("Error al leer el archivo");
-        const { Pid } = req.params;
-        const dataStr = JSON.parse(data)
-        const dataAMostrar = dataStr.splice(0, lim);
-        res.send(dataAMostrar);
-    })
-})
-
-productRoutes.delete('/DELETE/:Pid', (req, res) =>{
+productRoutes.delete('/products/:Pid', (req, res) =>{
     const { Pid } = req.params;
-    const posicion = products.findIndex(product => product.id === Pid);
-    console.log("POSICION", posicion)
-    console.log("PRODUCTS", products)
+    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
+    
+    const newData = JSON.parse(data)
+    const posicion = newData.findIndex(product => product.id === Pid);
 
     if (posicion !== -1) {
-        products.splice(posicion, 1);
-        fs.writeFile("./src/models/products.json", JSON.stringify(products), (err) => {
+        newData.splice(posicion, 1);
+        fs.writeFile("./src/models/products.json", JSON.stringify(newData), (err) => {
             if (err) {
                 res.status(404).send("Error al crear el producto");
             }
           })
-        res.send("Producto eliminado exitosamente.");
+        res.status(200).send("Producto eliminado exitosamente")
     } else {
         res.status(404).send("Producto no encontrado.");
     }
 })
+})
 
-productRoutes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
+productRoutes.put('/products/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
     const { Pid } = req.params;
     const { title } = req.params;
     const { description } = req.params;
@@ -85,12 +81,10 @@ productRoutes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:
     const { thumbnails } = req.params;
     
     fs.readFile('./src/models/products.json', 'utf-8', (err, data) => {
-        console.log("TODO OK")
         if (err) {
             res.status(404).send("Error al leer el archivo");
             return;
         }
-        console.log("data put: ", data);
     
         const parsedData = JSON.parse(data);
         let productoEncontrado = false;
@@ -123,30 +117,32 @@ productRoutes.put('/PUT/:Pid/:title/:description/:code/:price/:stock/:category/:
 });
 
 
-productRoutes.post('/POST/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) =>{
-    const { id } = req.params;
-    const { title } = req.params;
-    const { description } = req.params;
-    const { code } = req.params;
-    const { price } = req.params;
-    const { stock } = req.params;
-    const { category } = req.params;
-    const { thumbnails } = req.params;
+productRoutes.post('/products/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', async (req, res) => {
+    const { id, title, description, code, price, stock, category, thumbnails } = req.params;
+
+    const newProduct = new product(id, title, description, code, price, stock, category, thumbnails);
     
-    const producto = new product(id,title,description,code,price,stock,category,thumbnails)
-    res.send(`Producto Creado ${producto}`)
-    products.push(producto)
-    
-    fs.writeFile("./src/models/products.json", JSON.stringify(products), (err) => {
-        if (err) {
-            res.status(404).send("Error al crear el producto");
-        }
-      })
-    
+    fs.readFile('./src/models/products.json', 'utf-8', (err, data) =>{
+        if(err){
+            res.status(400).send("Error en la lectura de productos")
+        }else{
+            const dataExistente = JSON.parse(data)
+            dataExistente.push(newProduct)
+
+            fs.writeFile('./src/models/products.json', JSON.stringify(dataExistente) , err => {
+                if (err) {
+                    res.status(400).send("Error al crear el producto")
+                } else {
+                    res.status(200).send("Producto creado correctamente")
+                }
+            });}
+        
     })
+    
+});
 
 
-cartRoutes.post('/POST/:Cid/:products', (req, res) =>{
+cartRoutes.post('/cart/:Cid/:products', (req, res) =>{
     const { Cid } = req.params;
     contCart ++;
    
@@ -158,14 +154,14 @@ cartRoutes.post('/POST/:Cid/:products', (req, res) =>{
     res.send(arrayCarrito)
 })
 
-cartRoutes.get('/GET/:Cid', (req, res) =>{
+cartRoutes.get('/cart/:Cid', (req, res) =>{
     const { Cid } = req.params;
 
     const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);
     res.send(selectedCart)
 })
 
-cartRoutes.post('/POST/:Cid/product/:Pid', (req, res) => {
+cartRoutes.post('/cart/:Cid/product/:Pid', (req, res) => {
     const { Cid, Pid } = req.params;
 
     const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);

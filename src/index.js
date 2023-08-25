@@ -5,11 +5,11 @@ const app = express();
 import { productRoutes, cartRoutes } from './routes/products.routes.js'
 
 app.use(express.json())
-app.use('/products', productRoutes);
-app.use('/api/cart', cartRoutes);
+app.use('/', productRoutes);
+app.use('/api', cartRoutes);
 
 app.listen(port, ()=>{
-    console.log("servidor listo!")
+    console.log(`Servidor Listo en el puerto ${port}`)
 })
 
 
