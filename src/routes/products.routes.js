@@ -1,10 +1,12 @@
 import express from 'express'
 import fs from "fs";
-let products = [];
+import ProductManager from '../productManager.js'; 
 const productRoutes = express.Router();
 const cartRoutes = express.Router();
 let contCart = 0;
 const arrayCarrito = [];
+let contProd = 0;
+
 
 class product {
     constructor(id, title, description, code, price, stock, category, thumbnails){
@@ -20,16 +22,19 @@ class product {
     }
 }
 
-productRoutes.get('/products', (req,res)=>{
-    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
-        if(err) res.status(404).send("Error al leer el archivo");
-        const dataStr = JSON.parse(data);
-        res.send(dataStr);
-    })
-})
+fs.readFile('./src/models/counter.json', 'utf-8', (err, data) => {
+    if (err) {
+        return;
+    }
+    try {
+        contProd = JSON.parse(data).contador;
+    } catch (err) {
+    }
+});
 
-productRoutes.get('/products/LIM/:lim', (req, res) => {
-    const { lim } = req.params;
+
+productRoutes.get('/products/LIM', (req, res) => {
+    const  lim  = req.query.lim;
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
         if(err) res.status(404).send("Error al leer el archivo");
         const dataStr = JSON.parse(data)
@@ -38,24 +43,16 @@ productRoutes.get('/products/LIM/:lim', (req, res) => {
     })
 });
 
-productRoutes.get('/products/:Pid', (req, res) =>{
+productRoutes.delete('/products', (req, res) =>{
+    const id = req.query.id;
     fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
-        if(err) { res.status(404).send("Error al leer el archivo");}
-        const { Pid } = req.params;
-        const dataStr = JSON.parse(data)
-        dataStr.map((newData)=>{
-            newData.id === Pid ? res.send(newData) : null
-        })
-    })
-})
-
-productRoutes.delete('/products/:Pid', (req, res) =>{
-    const { Pid } = req.params;
-    fs.readFile('./src/models/products.json', 'utf-8', (err, data)=>{
-    
     const newData = JSON.parse(data)
-    const posicion = newData.findIndex(product => product.id === Pid);
+    const posicion = newData.findIndex(product => product.id === parseInt(id));
 
+     newData.map((product)=>{
+        product.id !== 0 ? product.id-- : product.id = 0
+    }) 
+     
     if (posicion !== -1) {
         newData.splice(posicion, 1);
         fs.writeFile("./src/models/products.json", JSON.stringify(newData), (err) => {
@@ -70,15 +67,10 @@ productRoutes.delete('/products/:Pid', (req, res) =>{
 })
 })
 
-productRoutes.put('/products/:Pid/:title/:description/:code/:price/:stock/:category/:thumbnails', (req, res) => {
-    const { Pid } = req.params;
-    const { title } = req.params;
-    const { description } = req.params;
-    const { code } = req.params;
-    const { price } = req.params;
-    const { stock } = req.params;
-    const { category } = req.params;
-    const { thumbnails } = req.params;
+productRoutes.put('/products', (req, res) => {
+    const id = req.query.id
+    const {title, description, code, price, stock, category, thumbnails } = req.body;
+
     
     fs.readFile('./src/models/products.json', 'utf-8', (err, data) => {
         if (err) {
@@ -90,7 +82,7 @@ productRoutes.put('/products/:Pid/:title/:description/:code/:price/:stock/:categ
         let productoEncontrado = false;
     
         parsedData.forEach(producto => {
-            if (producto.id === Pid) {
+            if (producto.id === parseInt(id)) {
                 producto.title = title;
                 producto.description = description;
                 producto.code = code;
@@ -117,33 +109,59 @@ productRoutes.put('/products/:Pid/:title/:description/:code/:price/:stock/:categ
 });
 
 
-productRoutes.post('/products/:id/:title/:description/:code/:price/:stock/:category/:thumbnails', async (req, res) => {
-    const { id, title, description, code, price, stock, category, thumbnails } = req.params;
-
-    const newProduct = new product(id, title, description, code, price, stock, category, thumbnails);
-    
-    fs.readFile('./src/models/products.json', 'utf-8', (err, data) =>{
-        if(err){
-            res.status(400).send("Error en la lectura de productos")
-        }else{
-            const dataExistente = JSON.parse(data)
-            dataExistente.push(newProduct)
-
-            fs.writeFile('./src/models/products.json', JSON.stringify(dataExistente) , err => {
-                if (err) {
-                    res.status(400).send("Error al crear el producto")
-                } else {
-                    res.status(200).send("Producto creado correctamente")
-                }
-            });}
-        
-    })
-    
+productRoutes.get('/products', async (req, res) => {
+    const id = req.query.id;
+    if(id === undefined){
+     try {
+        const productosPromise = ProductManager.getProducts();
+        const productos = await productosPromise; // Espera a que la promesa se resuelva
+        res.send(productos);
+    } catch (error) {
+        res.status(500).send("Error al obtener los productos");
+    }
+}
+    if(id !== undefined){
+        try{
+            const productosPromise = ProductManager.getProductById(parseInt(id));
+            const productoBuscado = await productosPromise;    
+        res.send(productoBuscado)
+        }
+        catch{
+          res.status(400).send("Producto no encontrado")
+        }
+    }
 });
 
 
-cartRoutes.post('/cart/:Cid/:products', (req, res) =>{
-    const { Cid } = req.params;
+productRoutes.post('/products', async (req, res) => {
+    const { title, description, code, price, stock, category, thumbnails } = req.body;
+    try {
+        await ProductManager.addProduct(contProd, title, description, code, price, stock, category, thumbnails);
+        res.status(200).send("Producto creado correctamente")
+        fs.readFile('./src/models/counter.json', 'utf-8', (err, data) => {
+            if (!err){
+                contProd++;
+            }
+
+        fs.writeFile('./src/models/counter.json', JSON.stringify({ contador: contProd }) , err => {
+            if(err){
+                res.status(400)
+            }
+            else{
+                res.status(200)
+            }
+        } )
+        });
+
+    } catch (error) {
+        res.status(400).send("Error al crear el producto");
+    }
+});
+
+
+
+cartRoutes.post('/cart', (req, res) =>{
+    const Cid  = req.query.Cid;
     contCart ++;
    
     const carrito = {
@@ -155,14 +173,14 @@ cartRoutes.post('/cart/:Cid/:products', (req, res) =>{
 })
 
 cartRoutes.get('/cart/:Cid', (req, res) =>{
-    const { Cid } = req.params;
+    const Cid = req.query.Cid;
 
     const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);
     res.send(selectedCart)
 })
 
-cartRoutes.post('/cart/:Cid/product/:Pid', (req, res) => {
-    const { Cid, Pid } = req.params;
+cartRoutes.post('/cart', (req, res) => {
+    const { Cid, Pid } = req.query;
 
     const selectedCart = arrayCarrito.find((carrito) => carrito.id === Cid);
 
